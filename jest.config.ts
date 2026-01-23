@@ -1,8 +1,11 @@
 export default {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  preset: "ts-jest",
+  testEnvironment: "node",
   transform: {
-    '^.+\\.ts$': 'ts-jest', 
+    "^.+\\.ts$": "ts-jest",
   },
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts', '<rootDir>/__tests__/**/*.spec.ts'],
+  testMatch: [
+    "<rootDir>/__tests__/**/*.test.ts",
+    "<rootDir>/__tests__/**/*.spec.ts",
+  ],
 };

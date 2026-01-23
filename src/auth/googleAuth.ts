@@ -25,7 +25,6 @@ async function fileExists(p: string): Promise<boolean> {
 async function loadSavedAuthClient() {
   if (!(await fileExists(TOKEN_PATH))) return null;
 
-  // checks if we have refresh token saved
   const token = await readJSON(TOKEN_PATH);
   const creds = await readJSON(CREDENTIALS_PATH);
 
@@ -49,7 +48,6 @@ async function saveAuthClient(client: any) {
   }
 
   const payload = {
-    // Google libraries accept this "authorized_user" shape
     type: "authorized_user",
     refresh_token: refresh,
   };
