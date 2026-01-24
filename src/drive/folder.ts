@@ -1,11 +1,12 @@
 import { drive } from "googleapis/build/src/apis/drive";
 import { extractFolderIdFromLink } from "../utils/folderLink";
 import { drive_v3 } from "googleapis/build/src/apis/drive/v3";
+import { DriveFile } from "../types/driveFile";
 
 export async function validateFolderLink(
   driveClient: drive_v3.Drive,
   folderLink: string,
-): Promise<{ id: string; name: string } | null> {
+): Promise<DriveFile | null> {
   const folderId = extractFolderIdFromLink(folderLink);
   if (!folderId) return null;
 
@@ -35,14 +36,15 @@ export async function validateFolderLink(
 export async function getFolderChildren(
   driveClient: drive_v3.Drive,
   folderId: string,
-) {
-  const files = [];
+): Promise<DriveFile[]> {
+  const files: DriveFile[] = [];
   let pageToken: string | undefined = undefined;
 
   try {
     do {
       const res: any = await driveClient.files.list({
-        q: `'${folderId}' in parents and trashed = false`,
+        // only want images or folders that could possibly contain more images
+        q: `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType = 'application/vnd.google-apps.folder')`,
         fields:
           "nextPageToken, files(id, name, mimeType, size, createdTime, md5Checksum)",
         supportsAllDrives: true,
@@ -63,8 +65,8 @@ export async function getFolderChildren(
 export async function crawlFolder(
   driveClient: drive_v3.Drive,
   folderId: string,
-) {
-  const files: any[] = [];
+): Promise<DriveFile[]> {
+  const files: Map<string, DriveFile> = new Map();
   const visitedFolderIds = new Set<string>();
   const queue = [folderId];
 
@@ -84,10 +86,13 @@ export async function crawlFolder(
       if (file.mimeType === "application/vnd.google-apps.folder") {
         queue.push(file.id);
       } else {
-        files.push(file);
+        if (!files.has(file.md5Checksum!)) {
+          files.set(file.md5Checksum!, file);
+          console.log("Found file: ", file.name);
+        }
       }
     }
   }
 
-  return files;
+  return Array.from(files.values());
 }
