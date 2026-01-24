@@ -2,11 +2,11 @@ jest.mock("../src/utils/folderLink", () => ({
   extractFolderIdFromLink: jest.fn(),
 }));
 
-import { getFolderFromLink } from "../src/client/driveFolders";
+import { validateFolderLink } from "../src/drive/folder";
 import { extractFolderIdFromLink } from "../src/utils/folderLink";
 import { drive_v3 } from "googleapis/build/src/apis/drive/v3";
 
-describe("getFolderFromLink", () => {
+describe("validateFolderLink", () => {
   const mockDriveClient = {
     files: {
       get: jest.fn(),
@@ -28,7 +28,7 @@ describe("getFolderFromLink", () => {
       },
     });
 
-    const result = await getFolderFromLink(
+    const result = await validateFolderLink(
       mockDriveClient,
       "/drive/folders/123",
     );
@@ -50,7 +50,7 @@ describe("getFolderFromLink", () => {
       },
     });
 
-    const result = await getFolderFromLink(
+    const result = await validateFolderLink(
       mockDriveClient,
       "/drive/folders/123",
     );
@@ -65,7 +65,7 @@ describe("getFolderFromLink", () => {
       new Error("File not found"),
     );
 
-    const result = await getFolderFromLink(
+    const result = await validateFolderLink(
       mockDriveClient,
       "/drive/folders/123",
     );
@@ -76,7 +76,7 @@ describe("getFolderFromLink", () => {
   it("returns null and never calls Drive when link is invalid", async () => {
     (extractFolderIdFromLink as jest.Mock).mockReturnValue(null);
 
-    const result = await getFolderFromLink(
+    const result = await validateFolderLink(
       mockDriveClient,
       "not-a-drive-link",
     );
