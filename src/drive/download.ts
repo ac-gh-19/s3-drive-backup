@@ -15,7 +15,7 @@ export async function getFileStream(
     },
     { responseType: "stream" },
   );
-  
+
   return file.data;
 }
 
