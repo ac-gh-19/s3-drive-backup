@@ -2,6 +2,10 @@ import { drive } from "googleapis/build/src/apis/drive";
 import { extractFolderIdFromLink } from "../utils/folderLink";
 import { drive_v3 } from "googleapis/build/src/apis/drive/v3";
 import { DriveFile } from "../types/driveFile";
+import { computeS3Key } from "../utils/computeS3Key";
+import { compute } from "googleapis/build/src/apis/compute";
+
+const INDENT_SPACE = "     ";
 
 export async function validateFolderLink(
   driveClient: drive_v3.Drive,
@@ -64,31 +68,43 @@ export async function getFolderChildren(
 
 export async function crawlFolder(
   driveClient: drive_v3.Drive,
-  folderId: string,
+  folder: DriveFile,
 ): Promise<DriveFile[]> {
   const files: Map<string, DriveFile> = new Map();
   const visitedFolderIds = new Set<string>();
-  const queue = [folderId];
+  const queue: Array<{ id: string; depth: number; name: string }> = [
+    { id: folder.id, depth: 0, name: folder.name },
+  ];
+  const depth = 0;
 
   while (queue.length > 0) {
-    const currentFolderId = queue.shift()!;
-    if (visitedFolderIds.has(currentFolderId)) {
+    const currentFolder = queue.shift()!;
+    if (visitedFolderIds.has(currentFolder.id)) {
       continue;
     }
-    visitedFolderIds.add(currentFolderId);
-
+    visitedFolderIds.add(currentFolder.id);
     const filesInCurrFolder = await getFolderChildren(
       driveClient,
-      currentFolderId,
+      currentFolder.id,
     );
 
+    console.log(
+      `${INDENT_SPACE.repeat(currentFolder.depth)}/${currentFolder.name}`,
+    );
     for (const file of filesInCurrFolder) {
       if (file.mimeType === "application/vnd.google-apps.folder") {
-        queue.push(file.id);
+        queue.push({
+          id: file.id,
+          depth: currentFolder.depth + 1,
+          name: file.name,
+        });
       } else {
+        // gets unique files only
         if (!files.has(file.md5Checksum!)) {
-          files.set(file.md5Checksum!, file);
-          console.log("Found file: ", file.name);
+          files.set(file.md5Checksum!, { ...file, s3Key: computeS3Key(file) });
+          console.log(
+            `${INDENT_SPACE.repeat(currentFolder.depth)}${INDENT_SPACE}- ${file.name}`,
+          );
         }
       }
     }
