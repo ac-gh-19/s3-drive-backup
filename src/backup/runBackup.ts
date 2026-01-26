@@ -17,6 +17,7 @@ const sleep = (ms: number) => {
 
 const PAUSE = 1000;
 
+// TODO: Currently doesn't handle nested folders in S3 properly
 export async function runBackup(
   driveClient: drive_v3.Drive,
   s3Client: S3,
@@ -39,10 +40,17 @@ export async function runBackup(
 
   const errorFiles: DriveFile[] = [];
   const successFiles: DriveFile[] = [];
+  const startTime = Date.now();
   for (const file of files) {
     const existingRecord = await getDriveFile(file.id);
     const action = await decideAction(file, existingRecord);
-    const result = await processFile(driveClient, s3Client, file, action);
+    const result = await processFile(
+      driveClient,
+      s3Client,
+      file,
+      action,
+      rootFolder.name,
+    );
     if (result) {
       successFiles.push(file);
     } else {
@@ -50,7 +58,10 @@ export async function runBackup(
     }
   }
 
+  const endTime = Date.now();
+  const duration = (endTime - startTime) / 1000;
+
   await sleep(PAUSE);
-  printBackupSummary(files, successFiles, errorFiles);
+  printBackupSummary(files, successFiles, errorFiles, duration);
   return;
 }

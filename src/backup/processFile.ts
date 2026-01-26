@@ -12,6 +12,7 @@ export async function processFile(
   s3Client: S3,
   file: DriveFile,
   action: BackupAction,
+  parentName: string,
 ): Promise<boolean> {
   try {
     let stream: NodeJS.ReadableStream;
@@ -38,7 +39,7 @@ export async function processFile(
           s3Client,
           stream,
           process.env.S3_BUCKET_NAME!,
-          computeS3Key(file),
+          `${parentName}/${computeS3Key(file)}`,
           file.mimeType!,
         );
         await insertDriveFile(file.id, file.md5Checksum!, computeS3Key(file));

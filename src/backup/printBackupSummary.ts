@@ -5,6 +5,7 @@ export function printBackupSummary(
   files: DriveFile[],
   successFiles: DriveFile[],
   errorFiles: DriveFile[],
+  duration: Number,
 ) {
   console.log(TEXT_DELIMITER);
   console.log("Backup Summary:");
@@ -18,5 +19,5 @@ export function printBackupSummary(
       console.log(`- ${file.name} (ID: ${file.id})`);
     });
   }
-  console.log("\nBackup process completed.\n");
+  console.log(`\nBackup process completed: ${duration} seconds.\n`);
 }
