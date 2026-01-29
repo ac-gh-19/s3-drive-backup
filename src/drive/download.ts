@@ -18,24 +18,3 @@ export async function getFileStream(
 
   return file.data;
 }
-
-export async function saveStreamToDownloads(
-  stream: NodeJS.ReadableStream,
-  file: DriveFile,
-) {
-  const downloadsDir = path.join(
-    process.env.HOME || process.cwd(),
-    "Downloads",
-  );
-  const filePath = path.join(downloadsDir, file.name || "unknown");
-
-  const writeStream = createWriteStream(filePath);
-
-  try {
-    await pipeline(stream, writeStream);
-  } catch (error) {
-    return "Error saving file: " + error;
-  }
-
-  return filePath;
-}

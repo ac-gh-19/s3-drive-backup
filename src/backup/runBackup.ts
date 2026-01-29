@@ -4,10 +4,10 @@ import { DriveFile } from "../types/driveFile";
 import { crawlFolder } from "../drive/folder";
 import { decideAction } from "./decideAction";
 import { printBackupSummary } from "./printBackupSummary";
-import { getDriveFile } from "../db/driveFiles";
 import { processFile } from "./processFile";
 import { TEXT_DELIMITER } from "../utils/textDelimiter";
 import dotenv from "dotenv";
+import { createDriveFileRepository } from "../db/driveFiles";
 
 dotenv.config();
 
@@ -21,6 +21,7 @@ const PAUSE = 1000;
 export async function runBackup(
   driveClient: drive_v3.Drive,
   s3Client: S3,
+  driveFileRepo: ReturnType<typeof createDriveFileRepository>,
   rootFolder: DriveFile,
 ): Promise<void> {
   console.log(
@@ -28,7 +29,7 @@ export async function runBackup(
   );
   await sleep(PAUSE);
 
-  console.log("Getting list of image files to back up...\n");
+  console.log("Getting list of files to back up...\n");
   await sleep(PAUSE);
 
   let files: DriveFile[] = [];
@@ -42,7 +43,7 @@ export async function runBackup(
   const successFiles: DriveFile[] = [];
   const startTime = Date.now();
   for (const file of files) {
-    const existingRecord = await getDriveFile(file.id);
+    const existingRecord = await driveFileRepo.get(file.id);
     const action = await decideAction(file, existingRecord);
     const result = await processFile(
       driveClient,

@@ -1,7 +1,6 @@
-import { db } from "./index";
-import { prepareStatements } from "./driveFiles";
+import Database from "better-sqlite3";
 
-export function initializeDB() {
+export function initializeDB(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS drive_files (
       drive_id TEXT PRIMARY KEY,
@@ -9,5 +8,4 @@ export function initializeDB() {
       s3Key TEXT NOT NULL
     );
   `);
-  prepareStatements();
 }
