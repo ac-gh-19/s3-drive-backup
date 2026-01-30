@@ -2,7 +2,7 @@ import { BackupAction } from "./decideAction";
 import { DriveFile } from "../types/driveFile";
 import { drive_v3 } from "googleapis";
 import { computeS3Key } from "../utils/computeS3Key";
-import { insertDriveFile, updateDriveFile } from "../db/driveFiles";
+import { createDriveFileRepository } from "../db/driveFiles";
 import { getFileStream } from "../drive/download";
 import { uploadStream } from "../s3/upload";
 import { S3 } from "@aws-sdk/client-s3";
@@ -10,6 +10,7 @@ import { S3 } from "@aws-sdk/client-s3";
 export async function processFile(
   driveClient: drive_v3.Drive,
   s3Client: S3,
+  driveFileRepo: ReturnType<typeof createDriveFileRepository>,
   file: DriveFile,
   action: BackupAction,
   parentName: string,
@@ -30,7 +31,11 @@ export async function processFile(
           computeS3Key(file),
           file.mimeType!,
         );
-        await updateDriveFile(file.id, file.md5Checksum!, computeS3Key(file));
+        await driveFileRepo.update(
+          file.id,
+          file.md5Checksum!,
+          computeS3Key(file),
+        );
         return true;
       case BackupAction.UPLOAD:
         console.log(`Uploading new file: ${file.name}`);
@@ -42,7 +47,11 @@ export async function processFile(
           `${parentName}/${computeS3Key(file)}`,
           file.mimeType!,
         );
-        await insertDriveFile(file.id, file.md5Checksum!, computeS3Key(file));
+        await driveFileRepo.insert(
+          file.id,
+          file.md5Checksum!,
+          computeS3Key(file),
+        );
         return true;
     }
   } catch (error) {

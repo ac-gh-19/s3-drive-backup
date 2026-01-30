@@ -13,6 +13,7 @@ async function main() {
   if (!folder) {
     throw new Error("Invalid folder link provided");
   }
+  folder.path = `${folder.name}/`;
 
   await runBackup(driveClient, s3Client, driveFileRepo, folder);
 }

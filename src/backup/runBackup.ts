@@ -48,6 +48,7 @@ export async function runBackup(
     const result = await processFile(
       driveClient,
       s3Client,
+      driveFileRepo,
       file,
       action,
       rootFolder.name,

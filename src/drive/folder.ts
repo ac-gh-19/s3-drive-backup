@@ -4,6 +4,7 @@ import { drive_v3 } from "googleapis/build/src/apis/drive/v3";
 import { DriveFile } from "../types/driveFile";
 import { computeS3Key } from "../utils/computeS3Key";
 import { compute } from "googleapis/build/src/apis/compute";
+import { joinPath } from "../utils/joinPath";
 
 const INDENT_SPACE = "     ";
 
@@ -39,7 +40,7 @@ export async function validateFolderLink(
 
 export async function getFolderChildren(
   driveClient: drive_v3.Drive,
-  folderId: string,
+  folder: DriveFile,
 ): Promise<DriveFile[]> {
   const files: DriveFile[] = [];
   let pageToken: string | undefined = undefined;
@@ -48,19 +49,20 @@ export async function getFolderChildren(
     do {
       const res: any = await driveClient.files.list({
         // only want images or folders that could possibly contain more images
-        q: `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType = 'application/vnd.google-apps.folder')`,
+        q: `'${folder.id}' in parents and trashed = false and (mimeType contains 'image/' or mimeType = 'application/vnd.google-apps.folder')`,
         fields:
           "nextPageToken, files(id, name, mimeType, size, createdTime, md5Checksum)",
         supportsAllDrives: true,
         pageToken: pageToken,
       });
 
-      files.push(...res.data.files);
+      const children: DriveFile[] = res.data.files;
+      files.push(...children);
       pageToken = res.data.nextPageToken;
     } while (pageToken);
   } catch (error) {
     throw new Error(
-      `Failed to list children of folder ID ${folderId}: ${error}`,
+      `Failed to list children of folder ID ${folder.id}: ${error}`,
     );
   }
   return files;
@@ -68,42 +70,58 @@ export async function getFolderChildren(
 
 export async function crawlFolder(
   driveClient: drive_v3.Drive,
-  folder: DriveFile,
+  rootFolder: DriveFile,
 ): Promise<DriveFile[]> {
-  const files: Map<string, DriveFile> = new Map();
+  const files = new Map<string, DriveFile>();
   const visitedFolderIds = new Set<string>();
-  const queue: Array<{ id: string; depth: number; name: string }> = [
-    { id: folder.id, depth: 0, name: folder.name },
+
+  const queue: Array<{
+    id: string;
+    name: string;
+    depth: number;
+    path: string;
+  }> = [
+    {
+      id: rootFolder.id,
+      name: rootFolder.name,
+      depth: 0,
+      path: `${rootFolder.name}/`,
+    },
   ];
-  const depth = 0;
 
   while (queue.length > 0) {
-    const currentFolder = queue.shift()!;
-    if (visitedFolderIds.has(currentFolder.id)) {
-      continue;
-    }
-    visitedFolderIds.add(currentFolder.id);
-    const filesInCurrFolder = await getFolderChildren(
-      driveClient,
-      currentFolder.id,
-    );
+    const current = queue.shift()!;
+    if (visitedFolderIds.has(current.id)) continue;
+    visitedFolderIds.add(current.id);
 
-    console.log(
-      `${INDENT_SPACE.repeat(currentFolder.depth)}/${currentFolder.name}`,
-    );
-    for (const file of filesInCurrFolder) {
-      if (file.mimeType === "application/vnd.google-apps.folder") {
+    console.log(`${INDENT_SPACE.repeat(current.depth)}/${current.name}`);
+
+    const children = await getFolderChildren(driveClient, current);
+
+    for (const child of children) {
+      if (child.mimeType === "application/vnd.google-apps.folder") {
         queue.push({
-          id: file.id,
-          depth: currentFolder.depth + 1,
-          name: file.name,
+          id: child.id,
+          name: child.name,
+          depth: current.depth + 1,
+          path: joinPath(current.path, child.name, true),
         });
-      } else {
-        // gets unique files only
-        if (!files.has(file.md5Checksum!)) {
-          files.set(file.md5Checksum!, { ...file, s3Key: computeS3Key(file) });
+      } else if (child.md5Checksum) {
+        const filePath = joinPath(current.path, child.name);
+
+        if (!files.has(child.md5Checksum)) {
+          const fileWithPath: DriveFile = {
+            ...child,
+            path: filePath,
+          };
+
+          files.set(child.md5Checksum, {
+            ...fileWithPath,
+            s3Key: computeS3Key(fileWithPath),
+          });
+
           console.log(
-            `${INDENT_SPACE.repeat(currentFolder.depth)}${INDENT_SPACE}- ${file.name}`,
+            `${INDENT_SPACE.repeat(current.depth)}${INDENT_SPACE}- ${child.name}`,
           );
         }
       }

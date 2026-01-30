@@ -1,6 +1,7 @@
 export type DriveFile = {
   id: string;
   name: string;
+  path?: string;
   s3Key?: string;
   mimeType?: string;
   md5Checksum?: string;
