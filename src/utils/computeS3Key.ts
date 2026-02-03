@@ -1,8 +1,16 @@
 import { DriveFile } from "../types/driveFile";
+import { joinPath } from "./joinPath";
 
-export function computeS3Key(file: DriveFile): string {
-  // The date-based folder structure caused issues with folder paths
-  // in S3 as created_time is based on when file was uploaded to Drive
-  // and not when the photo was taken by user. TODO: revisit later if needed
-  return `${file.path}/${file.md5Checksum!}-${file.id}/${file.name}`;
+export function computeS3Key(dirPath: string, file: DriveFile): string {
+  if (!file.md5Checksum) {
+    throw new Error(
+      `Cannot compute S3 key: file ${file.id} has no md5Checksum`,
+    );
+  }
+  if (!file.name) {
+    throw new Error(`Cannot compute S3 key: file ${file.id} has no name`);
+  }
+
+  const identity = `${file.name}_${file.md5Checksum}-${file.id}`;
+  return joinPath(dirPath, identity);
 }

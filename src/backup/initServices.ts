@@ -18,7 +18,6 @@ export async function initServices(db: Database.Database): Promise<{
     const s3Client = await getS3Client();
     return { driveClient, s3Client, driveFileRepo };
   } catch (error) {
-    console.error("Error initializing services:", error);
     throw error;
   }
 }
