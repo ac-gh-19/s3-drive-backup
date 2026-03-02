@@ -1,0 +1,1 @@
+This project automatically backs up image files from a Google Drive account into an Amazon S3 bucket. It connects to Drive, finds the images you want to store, and uploads them to S3 so you have a separate copy in cloud storage. It can be run on a schedule to keep the backup up to date without manual steps.
